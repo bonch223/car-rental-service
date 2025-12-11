@@ -4,11 +4,15 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Car, Wrench, CheckCircle, Plus, X, Calendar, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CheckInModal } from "@/components/admin/CheckInModal";
+import { Vehicle } from "@/lib/mockData";
 
 export default function FleetPage() {
     const { vehicles, returnVehicle, setMaintenance, maintenanceLogs, addMaintenanceLog } = useStore();
     const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
     const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [checkInVehicle, setCheckInVehicle] = useState<Vehicle | null>(null);
     const [maintenanceForm, setMaintenanceForm] = useState({
         type: "Service" as "Repair" | "Service" | "LTO Registration",
         cost: "",
@@ -36,6 +40,11 @@ export default function FleetPage() {
                 date: new Date().toISOString().split('T')[0]
             });
         }
+    };
+
+    const handleCheckInComplete = (vehicleId: string, fees: number) => {
+        returnVehicle(vehicleId);
+        // In a real app, you'd also record the fees and update the booking record
     };
 
     const vehicleLogs = selectedVehicle
@@ -133,11 +142,14 @@ export default function FleetPage() {
                             <div className="flex gap-2">
                                 {vehicle.status === "Rented" && (
                                     <button
-                                        onClick={() => returnVehicle(vehicle.id)}
+                                        onClick={() => {
+                                            setCheckInVehicle(vehicle);
+                                            setShowCheckInModal(true);
+                                        }}
                                         className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
                                     >
                                         <CheckCircle className="h-4 w-4" />
-                                        Return
+                                        Check-In
                                     </button>
                                 )}
 
@@ -187,6 +199,14 @@ export default function FleetPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Check-In Modal */}
+            <CheckInModal
+                vehicle={checkInVehicle}
+                isOpen={showCheckInModal}
+                onClose={() => setShowCheckInModal(false)}
+                onComplete={handleCheckInComplete}
+            />
 
             {/* Maintenance Log Modal */}
             {showMaintenanceModal && (
