@@ -14,9 +14,16 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initialDays }: BookingModalProps) {
-    const { createBooking, addOns } = useStore();
+    const { createBooking, addOns, bookings } = useStore();
     const [step, setStep] = useState(1);
-    const [days, setDays] = useState(initialDays || 3);
+
+    // Date and Time for Pickup/Return
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const [pickupDate, setPickupDate] = useState(tomorrow.toISOString().split('T')[0]);
+    const [pickupTime, setPickupTime] = useState("09:00");
+    const [returnDate, setReturnDate] = useState(new Date(tomorrow.getTime() + (initialDays || 3) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    const [returnTime, setReturnTime] = useState("09:00");
 
     // Find destination ID based on name, default to Tagum (1)
     const defaultDestId = destinations.find(d => d.name === initialLocation)?.id || "1";
@@ -32,6 +39,11 @@ export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initia
 
     // Booking reference
     const [bookingRef, setBookingRef] = useState("");
+
+    // Calculate days between pickup and return
+    const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+    const returnDateTime = new Date(`${returnDate}T${returnTime}`);
+    const days = Math.ceil((returnDateTime.getTime() - pickupDateTime.getTime()) / (1000 * 60 * 60 * 24)) || 1;
 
     if (!isOpen || !vehicle) return null;
 
@@ -52,18 +64,14 @@ export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initia
 
     const handleNext = () => {
         if (step === 3) {
-            // Create booking
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + days);
-
+            // Create booking with user-selected dates
             const bookingId = createBooking({
                 vehicleId: vehicle.id,
                 customerName,
                 customerEmail,
                 customerPhone,
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
+                startDate: pickupDateTime.toISOString(),
+                endDate: returnDateTime.toISOString(),
                 days,
                 destinationId,
                 addOns: selectedAddOns,
@@ -125,32 +133,66 @@ export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initia
                     {/* Step 1: Details */}
                     {step === 1 && (
                         <div className="space-y-6">
-                            {/* Rental Period Display */}
-                            <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
-                                <h3 className="mb-3 font-semibold text-primary">Rental Period</h3>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-muted-foreground">Pick-up:</span>
-                                        <p className="font-medium">{new Date().toLocaleDateString()} at 9:00 AM</p>
+                            {/* Rental Period with Date/Time Pickers */}
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-primary">Select Rental Period</h3>
+
+                                {/* Pickup Date & Time */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Pickup Date</label>
+                                        <input
+                                            type="date"
+                                            value={pickupDate}
+                                            onChange={(e) => setPickupDate(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                        />
                                     </div>
-                                    <div>
-                                        <span className="text-muted-foreground">Return:</span>
-                                        <p className="font-medium">{new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString()} at 9:00 AM</p>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Pickup Time</label>
+                                        <input
+                                            type="time"
+                                            value={pickupTime}
+                                            onChange={(e) => setPickupTime(e.target.value)}
+                                            className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Return Date & Time */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Return Date</label>
+                                        <input
+                                            type="date"
+                                            value={returnDate}
+                                            onChange={(e) => setReturnDate(e.target.value)}
+                                            min={pickupDate}
+                                            className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Return Time</label>
+                                        <input
+                                            type="time"
+                                            value={returnTime}
+                                            onChange={(e) => setReturnTime(e.target.value)}
+                                            className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Duration Display */}
+                                <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
+                                    <div className="text-center">
+                                        <span className="text-sm text-muted-foreground">Rental Duration: </span>
+                                        <span className="font-bold text-primary">{days} day{days !== 1 ? 's' : ''}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Rental Duration (Days)</label>
-                                    <input
-                                        type="number"
-                                        value={days}
-                                        onChange={(e) => setDays(parseInt(e.target.value) || 1)}
-                                        className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
-                                        min="1"
-                                    />
-                                </div>
+                            <div className="grid grid-cols-1 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Destination</label>
                                     <select

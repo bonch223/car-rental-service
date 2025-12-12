@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { Vehicle } from "@/lib/mockData";
-import { Fuel, Gauge, Settings, Users } from "lucide-react";
+import { Fuel, Gauge, Settings, Users, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/lib/store";
 
 interface CarCardProps {
     vehicle: Vehicle;
@@ -10,6 +11,18 @@ interface CarCardProps {
 }
 
 export function CarCard({ vehicle, onBook, className }: CarCardProps) {
+    const { bookings } = useStore();
+
+    // Find active booking for this vehicle
+    const activeBooking = bookings.find(b =>
+        b.vehicleId === vehicle.id &&
+        b.status === "Active"
+    );
+
+    const isAvailable = vehicle.status === "Available";
+    const isRented = vehicle.status === "Rented";
+    const isMaintenance = vehicle.status === "Maintenance";
+
     return (
         <div className={cn("group relative overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md", className)}>
             <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
@@ -18,11 +31,26 @@ export function CarCard({ vehicle, onBook, className }: CarCardProps) {
                     alt={`${vehicle.make} ${vehicle.model}`}
                     width={600}
                     height={400}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className={cn(
+                        "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105",
+                        !isAvailable && "opacity-75 grayscale-[30%]"
+                    )}
                 />
                 <div className="absolute top-3 right-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
                     {vehicle.category}
                 </div>
+
+                {/* Status Badge */}
+                {!isAvailable && (
+                    <div className={cn(
+                        "absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-bold backdrop-blur-md",
+                        isRented && "bg-amber-500/90 text-white",
+                        isMaintenance && "bg-red-500/90 text-white"
+                    )}>
+                        {isRented && "🚗 Rented Now"}
+                        {isMaintenance && "🔧 In Maintenance"}
+                    </div>
+                )}
             </div>
 
             <div className="p-5">
@@ -56,11 +84,33 @@ export function CarCard({ vehicle, onBook, className }: CarCardProps) {
                     </div>
                 </div>
 
+                {/* Availability Info */}
+                {isRented && activeBooking && (
+                    <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                        <div className="flex items-center gap-2 text-xs text-amber-800">
+                            <Calendar className="h-3 w-3" />
+                            <span className="font-medium">Available from: {new Date(activeBooking.endDate).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                )}
+
+                {isMaintenance && (
+                    <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-center">
+                        <p className="text-xs text-red-800 font-medium">Undergoing maintenance</p>
+                    </div>
+                )}
+
                 <button
-                    onClick={() => onBook?.(vehicle)}
-                    className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    onClick={() => isAvailable && onBook?.(vehicle)}
+                    disabled={!isAvailable}
+                    className={cn(
+                        "w-full rounded-xl py-3 text-sm font-semibold transition-colors",
+                        isAvailable
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    )}
                 >
-                    Book Now
+                    {isAvailable ? "Book Now" : isRented ? "Currently Rented" : "Not Available"}
                 </button>
             </div>
         </div>
