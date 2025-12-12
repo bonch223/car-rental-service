@@ -33,7 +33,7 @@ export default function DashboardPage() {
     };
 
     const selectedVehicle = selectedBooking
-        ? vehicles.find(v => v.id === selectedBooking.vehicleId)
+        ? vehicles.find(v => v.id === selectedBooking.vehicleId) ?? null
         : null;
 
     return (
@@ -198,7 +198,7 @@ export default function DashboardPage() {
                                 <div key={activity.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
                                     <div className="flex items-center gap-4">
                                         <div className={`h-2 w-2 rounded-full ${activity.type === 'booking' ? 'bg-green-500' :
-                                                activity.type === 'return' ? 'bg-blue-500' : 'bg-red-500'
+                                            activity.type === 'return' ? 'bg-blue-500' : 'bg-red-500'
                                             }`} />
                                         <div>
                                             <p className="font-medium">{activity.message}</p>
