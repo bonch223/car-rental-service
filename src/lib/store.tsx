@@ -53,7 +53,19 @@ export interface Booking {
     totalPrice: number;
     status: "Active" | "Completed" | "Cancelled";
     createdAt: Date;
-    returnPhotos?: string[]; // Base64 encoded images
+
+    // Check-Out Data (when customer picks up)
+    checkOutData?: {
+        initialMileage: number;
+        initialFuelLevel: string;
+        preExistingDamages: string;
+        checkOutPhotos: string[];
+        checkOutDate: Date;
+        checkedOutBy: string;
+    };
+
+    // Check-In Data (when customer returns)
+    returnPhotos?: string[];
     returnNotes?: string;
 }
 
@@ -68,6 +80,7 @@ interface StoreContextType {
 
     // Actions
     createBooking: (booking: Omit<Booking, "id" | "createdAt" | "status">) => string;
+    updateCheckOut: (bookingId: string, checkOutData: Booking["checkOutData"]) => void;
     completeBooking: (bookingId: string, photos?: string[], notes?: string) => void;
     bookVehicle: (vehicleId: string, customerName: string, days: number, destinationId: string, price: number) => void;
     returnVehicle: (vehicleId: string) => void;
@@ -136,6 +149,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
 
         return newBooking.id;
+    };
+
+    const updateCheckOut = (bookingId: string, checkOutData: Booking["checkOutData"]) => {
+        setBookings(prev => prev.map(b =>
+            b.id === bookingId ? { ...b, checkOutData } : b
+        ));
+        addActivity(`Vehicle checked out for booking ${bookingId}`, "booking");
     };
 
     const completeBooking = (bookingId: string, photos?: string[], notes?: string) => {
@@ -223,6 +243,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 addOns,
                 bookings,
                 createBooking,
+                updateCheckOut,
                 completeBooking,
                 bookVehicle,
                 returnVehicle,
