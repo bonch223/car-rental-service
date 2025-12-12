@@ -5,14 +5,19 @@ import { useStore } from "@/lib/store";
 import { Car, Wrench, CheckCircle, Plus, X, Calendar, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckInModal } from "@/components/admin/CheckInModal";
+import { CheckOutModal, CheckOutData } from "@/components/admin/CheckOutModal";
 import { Vehicle } from "@/lib/mockData";
+import { Booking } from "@/lib/store";
 
 export default function FleetPage() {
-    const { vehicles, returnVehicle, setMaintenance, maintenanceLogs, addMaintenanceLog, bookings } = useStore();
+    const { vehicles, returnVehicle, setMaintenance, maintenanceLogs, addMaintenanceLog, bookings, updateCheckOut } = useStore();
     const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
     const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [checkInVehicle, setCheckInVehicle] = useState<Vehicle | null>(null);
+    const [showCheckOutModal, setShowCheckOutModal] = useState(false);
+    const [checkOutVehicle, setCheckOutVehicle] = useState<Vehicle | null>(null);
+    const [checkOutBooking, setCheckOutBooking] = useState<Booking | null>(null);
     const [maintenanceForm, setMaintenanceForm] = useState({
         type: "Service" as "Repair" | "Service" | "LTO Registration",
         cost: "",
@@ -45,6 +50,13 @@ export default function FleetPage() {
     const handleCheckInComplete = (vehicleId: string, fees: number) => {
         returnVehicle(vehicleId);
         // In a real app, you'd also record the fees and update the booking record
+    };
+
+    const handleCheckOutComplete = (checkOutData: CheckOutData) => {
+        updateCheckOut(checkOutData.bookingId, checkOutData);
+        setShowCheckOutModal(false);
+        setCheckOutVehicle(null);
+        setCheckOutBooking(null);
     };
 
     const vehicleLogs = selectedVehicle
@@ -164,13 +176,29 @@ export default function FleetPage() {
                                         );
                                     }
 
-                                    // If rented but NOT checked out, show a disabled state or message
+                                    // If rented but NOT checked out, show Check-Out button
                                     if (vehicle.status === "Rented" && !activeBooking) {
-                                        return (
-                                            <div className="flex-1 rounded-lg bg-amber-100 px-3 py-2 text-center text-sm font-medium text-amber-700">
-                                                Awaiting Check-Out
-                                            </div>
+                                        const awaitingBooking = bookings.find(b =>
+                                            b.vehicleId === vehicle.id &&
+                                            b.status === "Active" &&
+                                            !b.checkOutData
                                         );
+
+                                        if (awaitingBooking) {
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        setCheckOutVehicle(vehicle);
+                                                        setCheckOutBooking(awaitingBooking);
+                                                        setShowCheckOutModal(true);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Check-Out
+                                                </button>
+                                            );
+                                        }
                                     }
 
                                     return null;
@@ -318,6 +346,19 @@ export default function FleetPage() {
                     </div>
                 </div>
             )}
+
+            {/* Check-Out Modal */}
+            <CheckOutModal
+                booking={checkOutBooking}
+                vehicle={checkOutVehicle}
+                isOpen={showCheckOutModal}
+                onClose={() => {
+                    setShowCheckOutModal(false);
+                    setCheckOutVehicle(null);
+                    setCheckOutBooking(null);
+                }}
+                onComplete={handleCheckOutComplete}
+            />
         </div>
     );
 }
