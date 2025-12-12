@@ -29,12 +29,32 @@ export interface PricingRule {
     isActive: boolean;
 }
 
-export interface Customer {
+export interface AddOn {
     id: string;
     name: string;
-    email: string;
-    phone: string;
-    bookings: string[]; // Booking IDs
+    price: number;
+    icon: string;
+}
+
+export interface Booking {
+    id: string;
+    vehicleId: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    startDate: string;
+    endDate: string;
+    days: number;
+    destinationId: string;
+    addOns: string[]; // AddOn IDs
+    basePrice: number;
+    addOnsTotal: number;
+    destinationFee: number;
+    totalPrice: number;
+    status: "Active" | "Completed" | "Cancelled";
+    createdAt: Date;
+    returnPhotos?: string[]; // Base64 encoded images
+    returnNotes?: string;
 }
 
 interface StoreContextType {
@@ -43,9 +63,12 @@ interface StoreContextType {
     destinations: Destination[];
     maintenanceLogs: MaintenanceLog[];
     pricingRules: PricingRule[];
-    customers: Customer[];
+    addOns: AddOn[];
+    bookings: Booking[];
 
     // Actions
+    createBooking: (booking: Omit<Booking, "id" | "createdAt" | "status">) => string;
+    completeBooking: (bookingId: string, photos?: string[], notes?: string) => void;
     bookVehicle: (vehicleId: string, customerName: string, days: number, destinationId: string, price: number) => void;
     returnVehicle: (vehicleId: string) => void;
     setMaintenance: (vehicleId: string) => void;
@@ -71,7 +94,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [pricingRules, setPricingRules] = useState<PricingRule[]>([
         { id: "1", name: "Christmas Rush", startDate: "2025-12-15", endDate: "2026-01-05", surchargePercentage: 20, isActive: true }
     ]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [addOns] = useState<AddOn[]>([
+        { id: "1", name: "Child Seat", price: 200, icon: "👶" },
+        { id: "2", name: "GPS Navigation", price: 150, icon: "🗺️" },
+        { id: "3", name: "Comprehensive Insurance", price: 500, icon: "🛡️" },
+        { id: "4", name: "Additional Driver", price: 300, icon: "👤" },
+    ]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
 
     const addActivity = (message: string, type: Activity["type"]) => {
         const newActivity: Activity = {
@@ -81,6 +110,54 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             type,
         };
         setActivities((prev) => [newActivity, ...prev]);
+    };
+
+    const createBooking = (bookingData: Omit<Booking, "id" | "createdAt" | "status">) => {
+        const newBooking: Booking = {
+            ...bookingData,
+            id: `BK-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            createdAt: new Date(),
+            status: "Active",
+        };
+
+        setBookings(prev => [newBooking, ...prev]);
+        setVehicles((prev) =>
+            prev.map((v) =>
+                v.id === bookingData.vehicleId ? { ...v, status: "Rented" } : v
+            )
+        );
+
+        const vehicle = vehicles.find((v) => v.id === bookingData.vehicleId);
+        if (vehicle) {
+            addActivity(
+                `New booking: ${vehicle.make} ${vehicle.model} for ${bookingData.customerName} (${bookingData.days} days, ₱${bookingData.totalPrice})`,
+                "booking"
+            );
+        }
+
+        return newBooking.id;
+    };
+
+    const completeBooking = (bookingId: string, photos?: string[], notes?: string) => {
+        setBookings(prev => prev.map(b =>
+            b.id === bookingId
+                ? { ...b, status: "Completed" as const, returnPhotos: photos, returnNotes: notes }
+                : b
+        ));
+
+        const booking = bookings.find(b => b.id === bookingId);
+        if (booking) {
+            setVehicles((prev) =>
+                prev.map((v) =>
+                    v.id === booking.vehicleId ? { ...v, status: "Available" } : v
+                )
+            );
+
+            const vehicle = vehicles.find((v) => v.id === booking.vehicleId);
+            if (vehicle) {
+                addActivity(`Booking ${bookingId} completed: ${vehicle.make} ${vehicle.model} returned`, "return");
+            }
+        }
     };
 
     const bookVehicle = (vehicleId: string, customerName: string, days: number, destinationId: string, price: number) => {
@@ -143,7 +220,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 destinations,
                 maintenanceLogs,
                 pricingRules,
-                customers,
+                addOns,
+                bookings,
+                createBooking,
+                completeBooking,
                 bookVehicle,
                 returnVehicle,
                 setMaintenance,
