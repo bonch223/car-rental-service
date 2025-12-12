@@ -8,7 +8,7 @@ import { CheckInModal } from "@/components/admin/CheckInModal";
 import { Vehicle } from "@/lib/mockData";
 
 export default function FleetPage() {
-    const { vehicles, returnVehicle, setMaintenance, maintenanceLogs, addMaintenanceLog } = useStore();
+    const { vehicles, returnVehicle, setMaintenance, maintenanceLogs, addMaintenanceLog, bookings } = useStore();
     const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
     const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -140,18 +140,41 @@ export default function FleetPage() {
                             </div>
 
                             <div className="flex gap-2">
-                                {vehicle.status === "Rented" && (
-                                    <button
-                                        onClick={() => {
-                                            setCheckInVehicle(vehicle);
-                                            setShowCheckInModal(true);
-                                        }}
-                                        className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
-                                    >
-                                        <CheckCircle className="h-4 w-4" />
-                                        Check-In
-                                    </button>
-                                )}
+                                {(() => {
+                                    // Check if this vehicle has an active booking that's been checked out
+                                    const activeBooking = bookings.find(b =>
+                                        b.vehicleId === vehicle.id &&
+                                        b.status === "Active" &&
+                                        b.checkOutData
+                                    );
+
+                                    // Only show Check-In if vehicle is rented AND has been checked out
+                                    if (vehicle.status === "Rented" && activeBooking) {
+                                        return (
+                                            <button
+                                                onClick={() => {
+                                                    setCheckInVehicle(vehicle);
+                                                    setShowCheckInModal(true);
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                                            >
+                                                <CheckCircle className="h-4 w-4" />
+                                                Check-In
+                                            </button>
+                                        );
+                                    }
+
+                                    // If rented but NOT checked out, show a disabled state or message
+                                    if (vehicle.status === "Rented" && !activeBooking) {
+                                        return (
+                                            <div className="flex-1 rounded-lg bg-amber-100 px-3 py-2 text-center text-sm font-medium text-amber-700">
+                                                Awaiting Check-Out
+                                            </div>
+                                        );
+                                    }
+
+                                    return null;
+                                })()}
 
                                 {vehicle.status === "Available" && (
                                     <button
