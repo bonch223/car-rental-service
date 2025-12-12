@@ -7,7 +7,7 @@ import { Search, Calendar, Calculator, Save, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function POSPage() {
-    const { vehicles, bookVehicle } = useStore();
+    const { vehicles, createBooking } = useStore();
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
     const [days, setDays] = useState(3);
     const [destinationId, setDestinationId] = useState("1");
@@ -26,7 +26,27 @@ export default function POSPage() {
 
     const handleCreateContract = () => {
         if (selectedVehicle) {
-            bookVehicle(selectedVehicle.id, "Walk-in Customer", days, destinationId, finalPrice);
+            // Create proper booking record
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + days);
+
+            createBooking({
+                vehicleId: selectedVehicle.id,
+                customerName: "Walk-in Customer",
+                customerEmail: "walkin@example.com",
+                customerPhone: "+63 000 000 0000",
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                days,
+                destinationId,
+                addOns: [], // POS doesn't have add-ons selection yet
+                basePrice: subtotal,
+                addOnsTotal: 0,
+                destinationFee: destinations.find(d => d.id === destinationId)?.surcharge || 0,
+                totalPrice: finalPrice,
+            });
+
             setIsSuccess(true);
             setTimeout(() => {
                 setIsSuccess(false);
