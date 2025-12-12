@@ -125,6 +125,21 @@ export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initia
                     {/* Step 1: Details */}
                     {step === 1 && (
                         <div className="space-y-6">
+                            {/* Rental Period Display */}
+                            <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
+                                <h3 className="mb-3 font-semibold text-primary">Rental Period</h3>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-muted-foreground">Pick-up:</span>
+                                        <p className="font-medium">{new Date().toLocaleDateString()} at 9:00 AM</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-muted-foreground">Return:</span>
+                                        <p className="font-medium">{new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString()} at 9:00 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Rental Duration (Days)</label>
@@ -180,8 +195,8 @@ export function BookingModal({ vehicle, isOpen, onClose, initialLocation, initia
                                             key={addOn.id}
                                             onClick={() => toggleAddOn(addOn.id)}
                                             className={`flex items-center gap-4 rounded-lg border-2 p-4 text-left transition-all ${isSelected
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-muted hover:border-primary/50'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-muted hover:border-primary/50'
                                                 }`}
                                         >
                                             <div className="text-3xl">{addOn.icon}</div>
